@@ -254,26 +254,25 @@ func Load(dir string) (*Store, error) {
 
 // Save the existing entities to disk. Each group becomes a file with the format
 // the format "<GROUP>.entities.csv" in the dir specified.
-func (store *Store) Save(dir string) {
+func (store *Store) Save(dir string) error {
 	store.RLock()
 	defer store.RUnlock()
 	dir = strings.TrimRight(dir, "/")
-	var wg sync.WaitGroup
 	for name, group := range store.Lookup {
-		wg.Add(1)
-		go func(group *Group, filename string) {
-			if file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666); err == nil {
-				defer file.Close()
-				w := bufio.NewWriter(file)
-				for _, entities := range group.Entities {
-					for _, entity := range entities {
-						w.WriteString(string(entity) + "\n")
-					}
+		filename := fmt.Sprintf("%s/%s", dir, strings.Replace(name, "/", "_", -1)+".entities.csv")
+		if file, err := os.Create(filename); err != nil {
+			// Failed
+			return err
+		} else {
+			w := bufio.NewWriter(file)
+			for _, entities := range group.Entities {
+				for _, entity := range entities {
+					w.WriteString(string(entity) + "\n")
 				}
-				w.Flush()
 			}
-			wg.Done()
-		}(group, fmt.Sprintf("%s/%s", dir, strings.Replace(name, "/", "_", -1)+".entities.csv"))
+			w.Flush()
+			file.Close()
+		}
 	}
-	wg.Wait()
+	return nil
 }

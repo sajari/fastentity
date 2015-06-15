@@ -72,3 +72,16 @@ func main() {
 - Allow functions to be passed with each group detection, e.g. boolean check if first letter is a capital, etc
 - Apply to streams of text
 - Concurrency
+
+## Saving and loading data
+You can save and load entity groups in CSV files. Each group is saved to it's own file. To load an entity set, point the store to the directory containing the entity files. 
+```go
+if store, err = Load("path_to_load_csv_files"); err != nil {
+	fmt.Printf("Failed to load store: %v", err)
+}
+```
+
+Same to save them
+```go
+err:= store.Save("path_to_save_csv_files")
+```

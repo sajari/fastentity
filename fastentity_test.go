@@ -108,9 +108,11 @@ func TestSaveLoad(t *testing.T) {
 	store.Add("locations", []rune("San Francisco, USA"))
 	store.Add("jobTitles", []rune("golang developer"))
 	store.Add("skills", []rune("PHP"), []rune("本語"), []rune("PRC"))
-	store.Save("/tmp")
+	err := store.Save("/tmp")
+	if err != nil {
+		t.Errorf("Failed to save store")
+	}
 
-	var err error
 	store, err = Load("/tmp")
 	if err != nil {
 		t.Errorf("Failed to load store from disk")
