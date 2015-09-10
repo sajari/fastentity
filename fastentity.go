@@ -218,6 +218,17 @@ func _find(rs []rune, groups ...*Group) map[string][][]rune {
 	return results
 }
 
+type incr struct {
+	sync.Mutex
+	n int
+}
+
+func (i *incr) incr() {
+	i.Lock()
+	i.n++
+	i.Unlock()
+}
+
 // Create a new store by loading entity files from a given directory. The format
 // expected has the format "<GROUP>.entities.csv"
 func Load(dir string) (*Store, error) {
@@ -225,14 +236,14 @@ func Load(dir string) (*Store, error) {
 	store := Init()
 	reGroupFile, _ := regexp.Compile("^(.+).entities.csv")
 	var wg sync.WaitGroup
-	fileCount := 0
+	fileCount := &incr{}
 	if files, err := ioutil.ReadDir(dir); err == nil {
 		for _, fileInfo := range files {
 			if m := reGroupFile.FindStringSubmatch(fileInfo.Name()); m != nil {
 				wg.Add(1)
 				go func(filename string, group string) {
 					if file, err := os.Open(filename); err == nil {
-						fileCount++
+						fileCount.incr()
 						defer file.Close()
 						reader := bufio.NewScanner(file)
 						for reader.Scan() {
@@ -247,7 +258,7 @@ func Load(dir string) (*Store, error) {
 		}
 	}
 	wg.Wait()
-	if fileCount == 0 {
+	if fileCount.n == 0 {
 		return store, errors.New("There are no entity files")
 	}
 	return store, nil
