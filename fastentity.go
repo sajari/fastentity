@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 	"unicode"
@@ -203,36 +202,43 @@ func (i *incr) incr() {
 	i.Unlock()
 }
 
+var entityFileSuffix = ".entities.csv"
+
 // Create a new store by loading entity files from a given directory. The format
 // expected has the format "<GROUP>.entities.csv"
 func Load(dir string) (*Store, error) {
 	dir = strings.TrimRight(dir, "/")
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
 	s := New()
-	reGroupFile, _ := regexp.Compile("^(.+).entities.csv")
 	var wg sync.WaitGroup
-	fileCount := &incr{}
-	if files, err := ioutil.ReadDir(dir); err == nil {
-		for _, fileInfo := range files {
-			if m := reGroupFile.FindStringSubmatch(fileInfo.Name()); m != nil {
-				wg.Add(1)
-				go func(filename string, group string) {
-					if file, err := os.Open(filename); err == nil {
-						fileCount.incr()
-						defer file.Close()
-						reader := bufio.NewScanner(file)
-						for reader.Scan() {
-							s.Add(group, []rune(reader.Text()))
-						}
-					} else {
-						fmt.Printf("Unable to load \"%s\" entity file: %s: %s\n", group, filename, err.Error())
-					}
-					wg.Done()
-				}(fmt.Sprintf("%s/%s", dir, fileInfo.Name()), m[1])
-			}
+	count := &incr{}
+	for _, fileInfo := range files {
+		if strings.HasSuffix(fileInfo.Name(), entityFileSuffix) {
+			wg.Add(1)
+			go func(filename string, group string) {
+				defer wg.Done()
+				f, err := os.Open(filename)
+				if err != nil {
+					// TODO: Remove this, return an error instead?
+					fmt.Printf("Unable to load \"%s\" entity file: %s: %s\n", group, filename, err.Error())
+					return
+				}
+				defer f.Close()
+
+				count.incr()
+				r := bufio.NewScanner(f)
+				for r.Scan() {
+					s.Add(group, []rune(r.Text()))
+				}
+			}(fmt.Sprintf("%s/%s", dir, fileInfo.Name()), strings.TrimSuffix(fileInfo.Name(), entityFileSuffix))
 		}
 	}
 	wg.Wait()
-	if fileCount.n == 0 {
+	if count.n == 0 {
 		return s, errors.New("There are no entity files")
 	}
 	return s, nil
@@ -245,20 +251,19 @@ func (s *Store) Save(dir string) error {
 	defer s.RUnlock()
 	dir = strings.TrimRight(dir, "/")
 	for name, group := range s.Lookup {
-		filename := fmt.Sprintf("%s/%s", dir, strings.Replace(name, "/", "_", -1)+".entities.csv")
-		if file, err := os.Create(filename); err != nil {
-			// Failed
+		filename := fmt.Sprintf("%s/%s", dir, strings.Replace(name, "/", "_", -1)+entityFileSuffix)
+		f, err := os.Create(filename)
+		if err != nil {
 			return err
-		} else {
-			w := bufio.NewWriter(file)
-			for _, entities := range group.Entities {
-				for _, entity := range entities {
-					w.WriteString(string(entity) + "\n")
-				}
-			}
-			w.Flush()
-			file.Close()
 		}
+		w := bufio.NewWriter(f)
+		for _, entities := range group.Entities {
+			for _, e := range entities {
+				w.WriteString(string(e) + "\n")
+			}
+		}
+		w.Flush()
+		f.Close()
 	}
 	return nil
 }
