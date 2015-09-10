@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	MAX_ENTITY_LEN     = 30
-	DEFAULT_GROUP_SIZE = 1000
+	MaxEntityLen = 30
+	DefaultGroupSize = 1000
 )
 
 const (
-	LEFT  = 0
-	RIGHT = 1
+	left  = 0
+	right = 1
 )
 
 type Pair [2]int
@@ -32,7 +32,7 @@ type Store struct {
 type Group struct {
 	Name     string
 	Entities map[string][][]rune
-	Max_len  int
+	MaxLen   int
 	sync.RWMutex
 }
 
@@ -55,7 +55,7 @@ func Init(groups ...string) *Store {
 	for _, name := range groups {
 		group := &Group{
 			Name:     name,
-			Entities: make(map[string][][]rune, DEFAULT_GROUP_SIZE),
+			Entities: make(map[string][][]rune, DefaultGroupSize),
 		}
 		store.Lookup[name] = group
 	}
@@ -73,7 +73,7 @@ func (store *Store) Add(name string, entities ...[]rune) {
 	if !ok {
 		group = &Group{
 			Name:     name,
-			Entities: make(map[string][][]rune, DEFAULT_GROUP_SIZE),
+			Entities: make(map[string][][]rune, DefaultGroupSize),
 		}
 		store.Lookup[name] = group
 	}
@@ -83,8 +83,8 @@ func (store *Store) Add(name string, entities ...[]rune) {
 	for _, e := range entities {
 		h := hash([]rune(e))
 		group.Entities[h] = append(group.Entities[h], e)
-		if len(e) > group.Max_len {
-			group.Max_len = len(e)
+		if len(e) > group.MaxLen {
+			group.MaxLen = len(e)
 		}
 	}
 	group.Unlock()
@@ -135,7 +135,7 @@ func (store *Store) FindAll(rs []rune) map[string][][]rune {
 		groups = append(groups, group)
 	}
 	store.RLock()
-	results := _find(rs, groups...)
+	results := find(rs, groups...)
 	store.RUnlock()
 	return results
 }
@@ -144,13 +144,13 @@ func (store *Store) FindAll(rs []rune) map[string][][]rune {
 // Find only the entities of a given type = "key"
 func (group *Group) Find(rs []rune) [][]rune {
 	group.RLock()
-	ents := _find(rs, group)
+	ents := find(rs, group)
 	group.RUnlock()
 	return ents[group.Name]
 }
 
 // Lock free find for use internally
-func _find(rs []rune, groups ...*Group) map[string][][]rune {
+func find(rs []rune, groups ...*Group) map[string][][]rune {
 
 	results := make(map[string][][]rune, len(groups))
 
@@ -176,28 +176,28 @@ func _find(rs []rune, groups ...*Group) map[string][][]rune {
 				p2 = pairs[len(pairs)-1]
 				for i := len(pairs) - 1; i >= 0; i-- {
 					p1 = pairs[i]
-					if p2[RIGHT]-p1[LEFT] > MAX_ENTITY_LEN {
+					if p2[right]-p1[left] > MaxEntityLen {
 						break // Too long or short, can ignore it
 					}
 					for _, group := range groups {
-						if p2[RIGHT]-p1[LEFT] > group.Max_len {
+						if p2[right]-p1[left] > group.MaxLen {
 							continue
 						}
-						if ents, ok := group.Entities[hash(rs[p1[LEFT]:p2[RIGHT]])]; ok {
+						if ents, ok := group.Entities[hash(rs[p1[left]:p2[right]])]; ok {
 							// We have at least one entity with this key
 							for _, ent := range ents {
-								if len(ent) != p2[RIGHT]-p1[LEFT] {
+								if len(ent) != p2[right]-p1[left] {
 									break
 								}
 								match := true
 								for i, r := range ent {
-									if unicode.ToLower(r) != unicode.ToLower(rs[p1[LEFT]+i]) {
+									if unicode.ToLower(r) != unicode.ToLower(rs[p1[left]+i]) {
 										match = false
 										break
 									}
 								}
 								if match {
-									results[group.Name] = append(results[group.Name], rs[p1[LEFT]:p2[RIGHT]])
+									results[group.Name] = append(results[group.Name], rs[p1[left]:p2[right]])
 								}
 							}
 						}
