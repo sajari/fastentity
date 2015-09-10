@@ -1,5 +1,5 @@
 # fastentity
-Fast discovery of huge lists of character sequences, e.g. text sequence identification in documents using Golang.
+Fast discovery of huge lists of character sequences, e.g. text sequence identification in documents using Go.
 
 ## Introduction
 
@@ -39,7 +39,7 @@ func main() {
 	str := []rune("日 本語. Jack was a Golang developer from sydney. San Francisco, USA... Or so they say.")
 
 	// Create a store
-	store := fastentity.Init("locations", "jobTitles")
+	store := fastentity.New("locations", "jobTitles")
 
 	// Add single entities
 	store.Add("locations", []rune("San Francisco, USA"))

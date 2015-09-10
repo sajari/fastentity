@@ -53,45 +53,46 @@ func shift(n pair, s []pair) (pair, []pair) {
 }
 
 // Create a new entity group structure
-func Init(groups ...string) *Store {
-	store := new(Store)
-	store.Lookup = make(map[string]*Group, len(groups))
+func New(groups ...string) *Store {
+	s := &Store{
+		Lookup: make(map[string]*Group, len(groups)),
+	}
 	for _, name := range groups {
-		group := &Group{
+		g := &Group{
 			Name:     name,
 			Entities: make(map[string][][]rune, DefaultGroupSize),
 		}
-		store.Lookup[name] = group
+		s.Lookup[name] = g
 	}
-	return store
+	return s
 }
 
 // Add a new entity to a particular group
-func (store *Store) Add(name string, entities ...[]rune) {
-	if store.Lookup == nil {
-		panic("You need to initialize the store before adding to it...")
+func (s *Store) Add(name string, entities ...[]rune) {
+	if s.Lookup == nil {
+		panic("You need to initialize the s before adding to it...")
 	}
 
-	store.Lock()
-	group, ok := store.Lookup[name]
+	s.Lock()
+	g, ok := s.Lookup[name]
 	if !ok {
-		group = &Group{
+		g = &Group{
 			Name:     name,
 			Entities: make(map[string][][]rune, DefaultGroupSize),
 		}
-		store.Lookup[name] = group
+		s.Lookup[name] = g
 	}
-	store.Unlock()
+	s.Unlock()
 
-	group.Lock()
+	g.Lock()
 	for _, e := range entities {
 		h := hash([]rune(e))
-		group.Entities[h] = append(group.Entities[h], e)
-		if len(e) > group.MaxLen {
-			group.MaxLen = len(e)
+		g.Entities[h] = append(g.Entities[h], e)
+		if len(e) > g.MaxLen {
+			g.MaxLen = len(e)
 		}
 	}
-	group.Unlock()
+	g.Unlock()
 }
 
 // Take the string and turn it into a hash
@@ -106,20 +107,20 @@ func hash(rs []rune) string {
 }
 
 // Find all entities for all type keys
-func (store *Store) FindAll(rs []rune) map[string][][]rune {
-	result := make(map[string][][]rune, len(store.Lookup))
-	for name, group := range store.Lookup {
-		result[name] = group.Find(rs)
+func (s *Store) FindAll(rs []rune) map[string][][]rune {
+	result := make(map[string][][]rune, len(s.Lookup))
+	for name, g := range s.Lookup {
+		result[name] = g.Find(rs)
 	}
 	return result
 }
 
 // Find only the entities of a given type = "key"
-func (group *Group) Find(rs []rune) [][]rune {
-	group.RLock()
-	ents := find(rs, group)
-	group.RUnlock()
-	return ents[group.Name]
+func (g *Group) Find(rs []rune) [][]rune {
+	g.RLock()
+	ents := find(rs, g)
+	g.RUnlock()
+	return ents[g.Name]
 }
 
 // Lock free find for use internally
@@ -206,7 +207,7 @@ func (i *incr) incr() {
 // expected has the format "<GROUP>.entities.csv"
 func Load(dir string) (*Store, error) {
 	dir = strings.TrimRight(dir, "/")
-	store := Init()
+	s := New()
 	reGroupFile, _ := regexp.Compile("^(.+).entities.csv")
 	var wg sync.WaitGroup
 	fileCount := &incr{}
@@ -220,7 +221,7 @@ func Load(dir string) (*Store, error) {
 						defer file.Close()
 						reader := bufio.NewScanner(file)
 						for reader.Scan() {
-							store.Add(group, []rune(reader.Text()))
+							s.Add(group, []rune(reader.Text()))
 						}
 					} else {
 						fmt.Printf("Unable to load \"%s\" entity file: %s: %s\n", group, filename, err.Error())
@@ -232,18 +233,18 @@ func Load(dir string) (*Store, error) {
 	}
 	wg.Wait()
 	if fileCount.n == 0 {
-		return store, errors.New("There are no entity files")
+		return s, errors.New("There are no entity files")
 	}
-	return store, nil
+	return s, nil
 }
 
 // Save the existing entities to disk. Each group becomes a file with the format
 // the format "<GROUP>.entities.csv" in the dir specified.
-func (store *Store) Save(dir string) error {
-	store.RLock()
-	defer store.RUnlock()
+func (s *Store) Save(dir string) error {
+	s.RLock()
+	defer s.RUnlock()
 	dir = strings.TrimRight(dir, "/")
-	for name, group := range store.Lookup {
+	for name, group := range s.Lookup {
 		filename := fmt.Sprintf("%s/%s", dir, strings.Replace(name, "/", "_", -1)+".entities.csv")
 		if file, err := os.Create(filename); err != nil {
 			// Failed

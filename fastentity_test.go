@@ -34,7 +34,7 @@ func TestHash(t *testing.T) {
 func TestFind(t *testing.T) {
 	str := []rune("日 本語. jack was a golang developer from sydney, for someone. San Francisco, USA... Or so they say. Maybe PHP, or PDX. Jody Shipway\\u0007\\n\\u0007")
 
-	store := Init("locations", "jobTitles") // Intentionally not initialising "skills"
+	store := New("locations", "jobTitles") // Intentionally not initialising "skills"
 	store.Add("locations", []rune("San Francisco, USA"))
 	store.Add("jobTitles", []rune("golang developer"))
 	store.Add("skills", []rune("PHP"), []rune("本語"), []rune("PRC"))
@@ -104,7 +104,7 @@ func BenchmarkFind(b *testing.B) {
 }
 
 func TestSaveLoad(t *testing.T) {
-	store := Init("locations", "jobTitles", "skills")
+	store := New("locations", "jobTitles", "skills")
 	store.Add("locations", []rune("San Francisco, USA"))
 	store.Add("jobTitles", []rune("golang developer"))
 	store.Add("skills", []rune("PHP"), []rune("本語"), []rune("PRC"))
