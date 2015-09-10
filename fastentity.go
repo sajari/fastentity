@@ -26,7 +26,7 @@ const (
 	right = 1
 )
 
-type Pair [2]int
+type pair [2]int
 
 type Store struct {
 	Lookup map[string]*Group
@@ -42,9 +42,9 @@ type Group struct {
 
 // Pops the last element and adds the new element
 // to the front of stack.
-func shift(n Pair, s []Pair) (Pair, []Pair) {
+func shift(n pair, s []pair) (pair, []pair) {
 	if len(s) == 0 {
-		return Pair{}, append(s, n)
+		return pair{}, append(s, n)
 	}
 	if len(s) == cap(s) {
 		return s[0], append(s[1:], n)
@@ -158,11 +158,11 @@ func find(rs []rune, groups ...*Group) map[string][][]rune {
 
 	results := make(map[string][][]rune, len(groups))
 
-	pairs := make([]Pair, 0, 20)
+	pairs := make([]pair, 0, 20)
 	start := 0
 	prevspace := true // First char of sequence is legit
 	thisspace := false
-	var p1, p2 Pair
+	var p1, p2 pair
 	for off, r := range rs {
 
 		// What are we looking at?
@@ -173,7 +173,7 @@ func find(rs []rune, groups ...*Group) map[string][][]rune {
 			start = off
 		} else if thisspace && !prevspace {
 			// Word is ending, shift the pairs stack
-			_, pairs = shift(Pair{start, off}, pairs)
+			_, pairs = shift(pair{start, off}, pairs)
 
 			// Run the stack, check for entities working backwards from the current position
 			if len(pairs) > 1 {
