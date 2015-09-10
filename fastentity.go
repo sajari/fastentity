@@ -1,3 +1,4 @@
+// Package fastentity provides text sequence identification in documents.
 package fastentity
 
 import (
