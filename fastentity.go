@@ -114,37 +114,6 @@ func (store *Store) FindAll(rs []rune) map[string][][]rune {
 	return result
 }
 
-/*
-// Find all entities for all type keys in parallel (slower)
-func (store *Store) FindAll(rs []rune) map[string][][]rune {
-	result := make(map[string][][]rune, len(store.Lookup))
-	var wg sync.WaitGroup
-	for name, group := range store.Lookup {
-		wg.Add(1)
-		go func(name string, group *Group) {
-			result[name] = group.Find(rs)
-			wg.Done()
-		}(name, group)
-	}
-	wg.Wait()
-	return result
-}
-*/
-
-/*
-// Find all together (slower)
-func (store *Store) FindAll(rs []rune) map[string][][]rune {
-	groups := make([]*Group, 0, len(store.Lookup))
-	for _, group := range store.Lookup {
-		groups = append(groups, group)
-	}
-	store.RLock()
-	results := find(rs, groups...)
-	store.RUnlock()
-	return results
-}
-*/
-
 // Find only the entities of a given type = "key"
 func (group *Group) Find(rs []rune) [][]rune {
 	group.RLock()
