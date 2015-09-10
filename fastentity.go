@@ -13,7 +13,11 @@ import (
 )
 
 var (
+	// Maximum entity length.  NB: currently entities can be added which are longer
+	// but they will be ignored in the search.
+	// TODO: Maybe also error/warn on import?
 	MaxEntityLen = 30
+	// Number of entities to initially allocate when creating a Group.
 	DefaultGroupSize = 1000
 )
 
