@@ -125,16 +125,13 @@ func (g *Group) Find(rs []rune) [][]rune {
 
 // Lock free find for use internally
 func find(rs []rune, groups ...*Group) map[string][][]rune {
-
 	results := make(map[string][][]rune, len(groups))
-
 	pairs := make([]pair, 0, 20)
 	start := 0
 	prevspace := true // First char of sequence is legit
 	thisspace := false
-	var p1, p2 pair
-	for off, r := range rs {
 
+	for off, r := range rs {
 		// What are we looking at?
 		thisspace = unicode.IsPunct(r) || unicode.IsSpace(r)
 
@@ -147,9 +144,9 @@ func find(rs []rune, groups ...*Group) map[string][][]rune {
 
 			// Run the stack, check for entities working backwards from the current position
 			if len(pairs) > 1 {
-				p2 = pairs[len(pairs)-1]
+				p2 := pairs[len(pairs)-1]
 				for i := len(pairs) - 1; i >= 0; i-- {
-					p1 = pairs[i]
+					p1 := pairs[i]
 					if p2[right]-p1[left] > MaxEntityLen {
 						break // Too long or short, can ignore it
 					}
@@ -178,7 +175,6 @@ func find(rs []rune, groups ...*Group) map[string][][]rune {
 					}
 				}
 			}
-
 		}
 
 		// Mark prevspace for the next loop
@@ -188,7 +184,6 @@ func find(rs []rune, groups ...*Group) map[string][][]rune {
 			prevspace = false
 		}
 	}
-
 	return results
 }
 
