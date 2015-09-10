@@ -67,26 +67,27 @@ func (store *Store) Add(name string, entities ...[]rune) {
 	if store.Lookup == nil {
 		panic("You need to initialize the store before adding to it...")
 	}
-	if _, ok := store.Lookup[name]; !ok {
-		group := &Group{
+
+	store.Lock()
+	group, ok := store.Lookup[name]
+	if !ok {
+		group = &Group{
 			Name:     name,
 			Entities: make(map[string][][]rune, DEFAULT_GROUP_SIZE),
 		}
-		store.Lock()
 		store.Lookup[name] = group
-		store.Unlock()
 	}
-	// Must exist now
-	if group, ok := store.Lookup[name]; ok {
-		group.Lock()
-		for _, e := range entities {
-			group.Entities[hash([]rune(e))] = append(group.Entities[hash([]rune(e))], e)
-			if len(e) > group.Max_len {
-				group.Max_len = len(e)
-			}
+	store.Unlock()
+
+	group.Lock()
+	for _, e := range entities {
+		h := hash([]rune(e))
+		group.Entities[h] = append(group.Entities[h], e)
+		if len(e) > group.Max_len {
+			group.Max_len = len(e)
 		}
-		group.Unlock()
 	}
+	group.Unlock()
 }
 
 // Take the string and turn it into a hash
