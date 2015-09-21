@@ -117,7 +117,7 @@ func TestSaveLoad(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to load store from disk")
 	}
-	for name, _ := range store.Lookup {
+	for name, _ := range store.groups {
 		if name != "locations" && name != "jobTitles" && name != "skills" {
 			t.Errorf("Groups were not named what they should be. Got '%s'", name)
 		}
