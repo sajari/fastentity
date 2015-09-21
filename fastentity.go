@@ -29,7 +29,7 @@ const (
 type pair [2]int
 
 type Store struct {
-	Lookup map[string]*Group
+	groups map[string]*Group
 	sync.RWMutex
 }
 
@@ -55,32 +55,32 @@ func shift(n pair, s []pair) (pair, []pair) {
 // Create a new entity group structure
 func New(groups ...string) *Store {
 	s := &Store{
-		Lookup: make(map[string]*Group, len(groups)),
+		groups: make(map[string]*Group, len(groups)),
 	}
 	for _, name := range groups {
 		g := &Group{
 			Name:     name,
 			Entities: make(map[string][][]rune, DefaultGroupSize),
 		}
-		s.Lookup[name] = g
+		s.groups[name] = g
 	}
 	return s
 }
 
 // Add a new entity to a particular group
 func (s *Store) Add(name string, entities ...[]rune) {
-	if s.Lookup == nil {
+	if s.groups == nil {
 		panic("You need to initialize the s before adding to it...")
 	}
 
 	s.Lock()
-	g, ok := s.Lookup[name]
+	g, ok := s.groups[name]
 	if !ok {
 		g = &Group{
 			Name:     name,
 			Entities: make(map[string][][]rune, DefaultGroupSize),
 		}
-		s.Lookup[name] = g
+		s.groups[name] = g
 	}
 	s.Unlock()
 
@@ -108,8 +108,8 @@ func hash(rs []rune) string {
 
 // Find all entities for all type keys
 func (s *Store) FindAll(rs []rune) map[string][][]rune {
-	result := make(map[string][][]rune, len(s.Lookup))
-	for name, g := range s.Lookup {
+	result := make(map[string][][]rune, len(s.groups))
+	for name, g := range s.groups {
 		result[name] = g.Find(rs)
 	}
 	return result
@@ -246,7 +246,7 @@ func (s *Store) Save(dir string) error {
 	s.RLock()
 	defer s.RUnlock()
 	dir = strings.TrimRight(dir, "/")
-	for name, group := range s.Lookup {
+	for name, group := range s.groups {
 		filename := fmt.Sprintf("%s/%s", dir, strings.Replace(name, "/", "_", -1)+entityFileSuffix)
 		f, err := os.Create(filename)
 		if err != nil {
