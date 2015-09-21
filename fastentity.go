@@ -28,6 +28,7 @@ const (
 
 type pair [2]int
 
+// Store is a collection of groups of entities.
 type Store struct {
 	groups map[string]*Group
 	sync.RWMutex
@@ -40,8 +41,7 @@ type Group struct {
 	sync.RWMutex
 }
 
-// Pops the last element and adds the new element
-// to the front of stack.
+// Pops the last element and adds the new element to the front of stack.
 func shift(n pair, s []pair) (pair, []pair) {
 	if len(s) == 0 {
 		return pair{}, append(s, n)
@@ -52,7 +52,7 @@ func shift(n pair, s []pair) (pair, []pair) {
 	return s[0], append(s, n)
 }
 
-// Create a new entity group structure
+// New creates a new Store of entity groups using the provided names.
 func New(groups ...string) *Store {
 	s := &Store{
 		groups: make(map[string]*Group, len(groups)),
@@ -67,7 +67,7 @@ func New(groups ...string) *Store {
 	return s
 }
 
-// Add a new entity to a particular group
+// Add ajoins the entities to the group identified by name.
 func (s *Store) Add(name string, entities ...[]rune) {
 	s.Lock()
 	g, ok := s.groups[name]
@@ -101,7 +101,7 @@ func hash(rs []rune) string {
 	return fmt.Sprintf("%s%03d", string(unicode.ToLower(rs[0])), len(rs))
 }
 
-// Find all entities for all type keys
+// FindAll searches the input returning a maping group name -> found entities.
 func (s *Store) FindAll(rs []rune) map[string][][]rune {
 	result := make(map[string][][]rune, len(s.groups))
 	for name, g := range s.groups {
@@ -195,8 +195,9 @@ func (i *incr) incr() {
 
 var entityFileSuffix = ".entities.csv"
 
-// Create a new store by loading entity files from a given directory. The format
-// expected has the format "<GROUP>.entities.csv"
+// Load creates a new Store by loading entity files from a given directory path. Any files
+// contained in the directory with names matching <group>.entities.csv will be imported,
+// and the entities added to the group <group>.
 func Load(dir string) (*Store, error) {
 	dir = strings.TrimRight(dir, "/")
 	files, err := ioutil.ReadDir(dir)
@@ -235,8 +236,8 @@ func Load(dir string) (*Store, error) {
 	return s, nil
 }
 
-// Save the existing entities to disk. Each group becomes a file with the format
-// the format "<GROUP>.entities.csv" in the dir specified.
+// Save writes the existing entities to disk under the given directory path (assumed
+// to already exist). Each entity group becomes a file <group>.entities.csv.
 func (s *Store) Save(dir string) error {
 	s.RLock()
 	defer s.RUnlock()
