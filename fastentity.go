@@ -253,20 +253,21 @@ func AddFromReader(r io.Reader, store *Store, name string) error {
 func (s *Store) Save(dir string) error {
 	s.RLock()
 	defer s.RUnlock()
+
 	dir = strings.TrimRight(dir, "/")
-	for name, group := range s.groups {
-		filename := fmt.Sprintf("%s/%s", dir, strings.Replace(name, "/", "_", -1)+entityFileSuffix)
-		f, err := os.Create(filename)
+	for name, g := range s.groups {
+		path := fmt.Sprintf("%s/%s", dir, strings.Replace(name, "/", "_", -1)+entityFileSuffix)
+		f, err := os.Create(path)
 		if err != nil {
 			return err
 		}
-		w := bufio.NewWriter(f)
-		for _, entities := range group.Entities {
+		defer f.Close()
+
+		for _, entities := range g.Entities {
 			for _, e := range entities {
-				w.WriteString(string(e) + "\n")
+				f.WriteString(string(e) + "\n")
 			}
 		}
-		w.Flush()
 		f.Close()
 	}
 	return nil
