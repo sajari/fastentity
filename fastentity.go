@@ -69,10 +69,6 @@ func New(groups ...string) *Store {
 
 // Add a new entity to a particular group
 func (s *Store) Add(name string, entities ...[]rune) {
-	if s.groups == nil {
-		panic("You need to initialize the s before adding to it...")
-	}
-
 	s.Lock()
 	g, ok := s.groups[name]
 	if !ok {
@@ -95,7 +91,6 @@ func (s *Store) Add(name string, entities ...[]rune) {
 	g.Unlock()
 }
 
-// Take the string and turn it into a hash
 func hash(rs []rune) string {
 	if len(rs) > 2 {
 		return fmt.Sprintf("%s%s%s%03d", string(unicode.ToLower(rs[0])), string(unicode.ToLower(rs[1])), string(unicode.ToLower(rs[2])), len(rs))
@@ -118,27 +113,27 @@ func (s *Store) FindAll(rs []rune) map[string][][]rune {
 // Find only the entities of a given type = "key"
 func (g *Group) Find(rs []rune) [][]rune {
 	g.RLock()
-	ents := find(rs, g)
+	ents := find(rs, []*Group{g})
 	g.RUnlock()
 	return ents[g.Name]
 }
 
 // Lock free find for use internally
-func find(rs []rune, groups ...*Group) map[string][][]rune {
+func find(rs []rune, groups []*Group) map[string][][]rune {
 	results := make(map[string][][]rune, len(groups))
 	pairs := make([]pair, 0, 20)
 	start := 0
-	prevspace := true // First char of sequence is legit
-	thisspace := false
+	prevSpace := true // First char of sequence is legit
+	space := false
 
 	for off, r := range rs {
 		// What are we looking at?
-		thisspace = unicode.IsPunct(r) || unicode.IsSpace(r)
+		space = unicode.IsPunct(r) || unicode.IsSpace(r)
 
-		if prevspace && !thisspace {
+		if prevSpace && !space {
 			// Word is beginning at this rune
 			start = off
-		} else if thisspace && !prevspace {
+		} else if space && !prevSpace {
 			// Word is ending, shift the pairs stack
 			_, pairs = shift(pair{start, off}, pairs)
 
@@ -177,11 +172,11 @@ func find(rs []rune, groups ...*Group) map[string][][]rune {
 			}
 		}
 
-		// Mark prevspace for the next loop
-		if thisspace {
-			prevspace = true
+		// Mark prevSpace for the next loop
+		if space {
+			prevSpace = true
 		} else {
-			prevspace = false
+			prevSpace = false
 		}
 	}
 	return results
