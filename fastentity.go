@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -221,11 +222,13 @@ func Load(dir string) (*Store, error) {
 				}
 				defer f.Close()
 
-				count.incr()
-				r := bufio.NewScanner(f)
-				for r.Scan() {
-					s.Add(group, []rune(r.Text()))
+				err = AddFromReader(f, s, group)
+				if err != nil {
+					// TODO: Remove this, return an error instead?
+					fmt.Printf("error reading from %v: %v\n", filename, err)
+					return
 				}
+				count.incr()
 			}(fmt.Sprintf("%s/%s", dir, fileInfo.Name()), strings.TrimSuffix(fileInfo.Name(), entityFileSuffix))
 		}
 	}
@@ -234,6 +237,15 @@ func Load(dir string) (*Store, error) {
 		return s, errors.New("There are no entity files")
 	}
 	return s, nil
+}
+
+// AddFromReader adds entities to the store under the group name from the io.Reader.
+func AddFromReader(r io.Reader, store *Store, name string) error {
+	s := bufio.NewScanner(r)
+	for s.Scan() {
+		store.Add(name, []rune(s.Text()))
+	}
+	return s.Err()
 }
 
 // Save writes the existing entities to disk under the given directory path (assumed
