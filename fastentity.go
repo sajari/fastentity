@@ -196,10 +196,10 @@ func (i *incr) incr() {
 
 var entityFileSuffix = ".entities.csv"
 
-// Load creates a new Store by loading entity files from a given directory path. Any files
+// FromDir creates a new Store by loading entity files from a given directory path. Any files
 // contained in the directory with names matching <group>.entities.csv will be imported,
 // and the entities added to the group <group>.
-func Load(dir string) (*Store, error) {
+func FromDir(dir string) (*Store, error) {
 	dir = strings.TrimRight(dir, "/")
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
