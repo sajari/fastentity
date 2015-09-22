@@ -209,32 +209,42 @@ func Load(dir string) (*Store, error) {
 	s := New()
 	var wg sync.WaitGroup
 	count := &incr{}
-	for _, fileInfo := range files {
-		if strings.HasSuffix(fileInfo.Name(), entityFileSuffix) {
+	errCh := make(chan error, len(files))
+	for _, stat := range files {
+		if strings.HasSuffix(stat.Name(), entityFileSuffix) {
 			wg.Add(1)
-			go func(filename string, group string) {
+			go func(path string, group string) {
 				defer wg.Done()
-				f, err := os.Open(filename)
+				f, err := os.Open(path)
 				if err != nil {
-					// TODO: Remove this, return an error instead?
-					fmt.Printf("Unable to load \"%s\" entity file: %s: %s\n", group, filename, err.Error())
+					errCh <- fmt.Errorf("error opening %v: %v\n", path, err)
 					return
 				}
 				defer f.Close()
 
 				err = AddFromReader(f, s, group)
 				if err != nil {
-					// TODO: Remove this, return an error instead?
-					fmt.Printf("error reading from %v: %v\n", filename, err)
+					errCh <- fmt.Errorf("error reading from %v: %v\n", path, err)
 					return
 				}
 				count.incr()
-			}(fmt.Sprintf("%s/%s", dir, fileInfo.Name()), strings.TrimSuffix(fileInfo.Name(), entityFileSuffix))
+			}(fmt.Sprintf("%s/%s", dir, stat.Name()), strings.TrimSuffix(stat.Name(), entityFileSuffix))
 		}
 	}
 	wg.Wait()
+	close(errCh)
+
+	for e := range errCh {
+		if err == nil {
+			err = e
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	if count.n == 0 {
-		return s, errors.New("There are no entity files")
+		return nil, errors.New("no entity files found")
 	}
 	return s, nil
 }
