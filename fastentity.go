@@ -31,15 +31,17 @@ type pair [2]int
 
 // Store is a collection of groups of entities.
 type Store struct {
-	groups map[string]*Group
-	sync.RWMutex
+	sync.RWMutex // protects groups
+
+	groups map[string]*group
 }
 
-type Group struct {
-	Name     string
-	Entities map[string][][]rune
-	MaxLen   int
+type group struct {
 	sync.RWMutex
+
+	name     string
+	entities map[string][][]rune
+	maxLen   int
 }
 
 // Pops the last element and adds the new element to the front of stack.
@@ -56,12 +58,12 @@ func shift(n pair, s []pair) (pair, []pair) {
 // New creates a new Store of entity groups using the provided names.
 func New(groups ...string) *Store {
 	s := &Store{
-		groups: make(map[string]*Group, len(groups)),
+		groups: make(map[string]*group, len(groups)),
 	}
 	for _, name := range groups {
-		g := &Group{
-			Name:     name,
-			Entities: make(map[string][][]rune, DefaultGroupSize),
+		g := &group{
+			name:     name,
+			entities: make(map[string][][]rune, DefaultGroupSize),
 		}
 		s.groups[name] = g
 	}
@@ -73,9 +75,9 @@ func (s *Store) Add(name string, entities ...[]rune) {
 	s.Lock()
 	g, ok := s.groups[name]
 	if !ok {
-		g = &Group{
-			Name:     name,
-			Entities: make(map[string][][]rune, DefaultGroupSize),
+		g = &group{
+			name:     name,
+			entities: make(map[string][][]rune, DefaultGroupSize),
 		}
 		s.groups[name] = g
 	}
@@ -84,9 +86,9 @@ func (s *Store) Add(name string, entities ...[]rune) {
 	g.Lock()
 	for _, e := range entities {
 		h := hash([]rune(e))
-		g.Entities[h] = append(g.Entities[h], e)
-		if len(e) > g.MaxLen {
-			g.MaxLen = len(e)
+		g.entities[h] = append(g.entities[h], e)
+		if len(e) > g.maxLen {
+			g.maxLen = len(e)
 		}
 	}
 	g.Unlock()
@@ -105,22 +107,22 @@ func hash(rs []rune) string {
 // FindAll searches the input returning a maping group name -> found entities.
 func (s *Store) FindAll(rs []rune) map[string][][]rune {
 	result := make(map[string][][]rune, len(s.groups))
-	for name, g := range s.groups {
-		result[name] = g.Find(rs)
+	for s, g := range s.groups {
+		result[s] = g.Find(rs)
 	}
 	return result
 }
 
 // Find only the entities of a given type = "key"
-func (g *Group) Find(rs []rune) [][]rune {
+func (g *group) Find(rs []rune) [][]rune {
 	g.RLock()
-	ents := find(rs, []*Group{g})
+	ents := find(rs, []*group{g})
 	g.RUnlock()
-	return ents[g.Name]
+	return ents[g.name]
 }
 
 // Lock free find for use internally
-func find(rs []rune, groups []*Group) map[string][][]rune {
+func find(rs []rune, groups []*group) map[string][][]rune {
 	results := make(map[string][][]rune, len(groups))
 	pairs := make([]pair, 0, 20)
 	start := 0
@@ -146,11 +148,11 @@ func find(rs []rune, groups []*Group) map[string][][]rune {
 					if p2[right]-p1[left] > MaxEntityLen {
 						break // Too long or short, can ignore it
 					}
-					for _, group := range groups {
-						if p2[right]-p1[left] > group.MaxLen {
+					for _, g := range groups {
+						if p2[right]-p1[left] > g.maxLen {
 							continue
 						}
-						if ents, ok := group.Entities[hash(rs[p1[left]:p2[right]])]; ok {
+						if ents, ok := g.entities[hash(rs[p1[left]:p2[right]])]; ok {
 							// We have at least one entity with this key
 							for _, ent := range ents {
 								if len(ent) != p2[right]-p1[left] {
@@ -164,7 +166,7 @@ func find(rs []rune, groups []*Group) map[string][][]rune {
 									}
 								}
 								if match {
-									results[group.Name] = append(results[group.Name], rs[p1[left]:p2[right]])
+									results[g.name] = append(results[g.name], rs[p1[left]:p2[right]])
 								}
 							}
 						}
@@ -273,7 +275,7 @@ func (s *Store) Save(dir string) error {
 		}
 		defer f.Close()
 
-		for _, entities := range g.Entities {
+		for _, entities := range g.entities {
 			for _, e := range entities {
 				f.WriteString(string(e) + "\n")
 			}
