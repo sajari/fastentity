@@ -255,7 +255,10 @@ func FromDir(dir string) (*Store, error) {
 func AddFromReader(r io.Reader, store *Store, name string) error {
 	s := bufio.NewScanner(r)
 	for s.Scan() {
-		store.Add(name, []rune(s.Text()))
+		rt := []rune(s.Text())
+		if len(rt) > 0 {
+			store.Add(name, rt)
+		}
 	}
 	return s.Err()
 }
