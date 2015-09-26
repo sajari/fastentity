@@ -76,7 +76,7 @@ func main() {
 ## Saving and loading data
 You can save and load entity groups in CSV files. Each group is saved to it's own file. To load an entity set, point the store to the directory containing the entity files. 
 ```go
-if store, err = Load("path_to_load_csv_files"); err != nil {
+if store, err = fastentity.FromDir("path_to_load_csv_files"); err != nil {
 	fmt.Printf("Failed to load store: %v", err)
 }
 ```
