@@ -1,19 +1,8 @@
 package fastentity
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 var resume_store *Store
-
-func init() {
-	var err error
-	resume_store, err = Load("data")
-	if err != nil {
-		fmt.Printf("Failed to load test resume store: %v", err)
-	}
-}
 
 func TestHash(t *testing.T) {
 	strs := map[string]string{
@@ -113,7 +102,7 @@ func TestSaveLoad(t *testing.T) {
 		t.Errorf("Failed to save store")
 	}
 
-	store, err = Load("/tmp")
+	store, err = FromDir("/tmp")
 	if err != nil {
 		t.Errorf("Failed to load store from disk")
 	}
