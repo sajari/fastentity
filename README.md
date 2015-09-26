@@ -1,4 +1,6 @@
 # fastentity
+[![Build Status](https://travis-ci.org/sajari/fastentity.svg?branch=master)](https://travis-ci.org/sajari/fastentity)
+
 Fast discovery of huge lists of character sequences, e.g. text sequence identification in documents using Go.
 
 ## Introduction
