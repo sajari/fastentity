@@ -185,17 +185,6 @@ func find(rs []rune, groups []*group) map[string][][]rune {
 	return results
 }
 
-type incr struct {
-	sync.Mutex
-	n int
-}
-
-func (i *incr) incr() {
-	i.Lock()
-	i.n++
-	i.Unlock()
-}
-
 var entityFileSuffix = ".entities.csv"
 
 // FromDir creates a new Store by loading entity files from a given directory path. Any files
@@ -210,7 +199,11 @@ func FromDir(dir string) (*Store, error) {
 
 	s := New()
 	var wg sync.WaitGroup
-	count := &incr{}
+	count := struct {
+		sync.Mutex
+		n int
+	}{}
+
 	errCh := make(chan error, len(files))
 	for _, stat := range files {
 		if strings.HasSuffix(stat.Name(), entityFileSuffix) {
@@ -229,7 +222,9 @@ func FromDir(dir string) (*Store, error) {
 					errCh <- fmt.Errorf("error reading from %v: %v\n", path, err)
 					return
 				}
-				count.incr()
+				count.Lock()
+				count.n++
+				count.Unlock()
 			}(fmt.Sprintf("%s/%s", dir, stat.Name()), strings.TrimSuffix(stat.Name(), entityFileSuffix))
 		}
 	}
