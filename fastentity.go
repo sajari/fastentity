@@ -36,6 +36,11 @@ type Store struct {
 	groups map[string]*group
 }
 
+type Entity struct {
+	Text   []rune
+	Offset int
+}
+
 type group struct {
 	sync.RWMutex
 
@@ -70,7 +75,7 @@ func New(groups ...string) *Store {
 	return s
 }
 
-// Add ajoins the entities to the group identified by name.
+// Add adjoins the entities to the group identified by name.
 func (s *Store) Add(name string, entities ...[]rune) {
 	s.Lock()
 	g, ok := s.groups[name]
@@ -105,8 +110,8 @@ func hash(rs []rune) string {
 }
 
 // FindAll searches the input returning a maping group name -> found entities.
-func (s *Store) FindAll(rs []rune) map[string][][]rune {
-	result := make(map[string][][]rune, len(s.groups))
+func (s *Store) FindAll(rs []rune) map[string][]Entity {
+	result := make(map[string][]Entity, len(s.groups))
 	for s, g := range s.groups {
 		result[s] = g.Find(rs)
 	}
@@ -114,7 +119,7 @@ func (s *Store) FindAll(rs []rune) map[string][][]rune {
 }
 
 // Find only the entities of a given type = "key"
-func (g *group) Find(rs []rune) [][]rune {
+func (g *group) Find(rs []rune) []Entity {
 	g.RLock()
 	ents := find(rs, []*group{g})
 	g.RUnlock()
@@ -122,8 +127,8 @@ func (g *group) Find(rs []rune) [][]rune {
 }
 
 // Lock free find for use internally
-func find(rs []rune, groups []*group) map[string][][]rune {
-	results := make(map[string][][]rune, len(groups))
+func find(rs []rune, groups []*group) map[string][]Entity {
+	results := make(map[string][]Entity, len(groups))
 	pairs := make([]pair, 0, 20)
 	start := 0
 	prevSpace := true // First char of sequence is legit
@@ -166,7 +171,12 @@ func find(rs []rune, groups []*group) map[string][][]rune {
 									}
 								}
 								if match {
-									results[g.name] = append(results[g.name], rs[p1[left]:p2[right]])
+									results[g.name] = append(results[g.name],
+										Entity{
+											Text:   rs[p1[left]:p2[right]],
+											Offset: p1[left],
+										},
+									)
 								}
 							}
 						}
