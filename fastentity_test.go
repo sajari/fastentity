@@ -35,7 +35,7 @@ func TestFind(t *testing.T) {
 		case "locations":
 			ok := false
 			for _, f := range found {
-				if string(f.Text) == "San Francisco, USA" {
+				if string(f.Text) == "San Francisco, USA" && f.Offset == 60 {
 					ok = true
 				}
 			}
@@ -45,10 +45,10 @@ func TestFind(t *testing.T) {
 		case "skills":
 			ok, ok2 := false, false
 			for _, f := range found {
-				if string(f.Text) == "PHP" {
+				if string(f.Text) == "PHP" && f.Offset == 104 {
 					ok = true
 				}
-				if string(f.Text) == "本語" {
+				if string(f.Text) == "本語" && f.Offset == 2 {
 					ok2 = true
 				}
 			}
@@ -61,7 +61,7 @@ func TestFind(t *testing.T) {
 		case "jobTitles":
 			ok := false
 			for _, f := range found {
-				if string(f.Text) == "golang developer" {
+				if string(f.Text) == "golang developer" && f.Offset == 17 {
 					ok = true
 				}
 			}
@@ -71,7 +71,7 @@ func TestFind(t *testing.T) {
 		case "last":
 			ok := false
 			for _, f := range found {
-				if string(f.Text) == "Shipway" {
+				if string(f.Text) == "Shipway" && f.Offset == 122 {
 					ok = true
 				}
 			}

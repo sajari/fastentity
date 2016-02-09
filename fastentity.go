@@ -75,7 +75,7 @@ func New(groups ...string) *Store {
 	return s
 }
 
-// Add joins the entities to the group identified by name.
+// Add adjoins the entities to the group identified by name.
 func (s *Store) Add(name string, entities ...[]rune) {
 	s.Lock()
 	g, ok := s.groups[name]
